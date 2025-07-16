@@ -1,0 +1,47 @@
+{
+  "name": "pocketflow-ts",
+  "version": "1.0.0",
+  "description": "A 100-line minimalist LLM framework for TypeScript/Node.js - Agents, Task Decomposition, RAG, etc.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "test": "jest",
+    "example:hello-world": "ts-node examples/hello-world/main.ts",
+    "example:workflow": "ts-node examples/workflow/main.ts",
+    "example:agent": "ts-node examples/agent/main.ts",
+    "example:rag": "ts-node examples/rag/main.ts",
+    "example:batch": "ts-node examples/batch/main.ts"
+  },
+  "keywords": [
+    "llm",
+    "ai",
+    "agents",
+    "workflow",
+    "rag",
+    "typescript",
+    "nodejs",
+    "minimalist"
+  ],
+  "author": "PocketFlow TS",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/jest": "^29.0.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "ts-node": "^10.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "openai": "^4.0.0"
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/pocketflow-ts.git"
+  }
+}
