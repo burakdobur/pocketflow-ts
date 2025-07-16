@@ -102,9 +102,10 @@ class DirectAnswer extends Node {
     return callLLM(`Context: ${contextStr}\nAnswer this question: ${query}`);
   }
 
-  post(shared: SharedStore, prepRes: any, execRes: string): void {
+  post(shared: SharedStore, prepRes: any, execRes: string): string {
     console.log(`💡 Answer: ${execRes}`);
     shared.answer = execRes;
+    return "default";
   }
 }
 
@@ -122,7 +123,7 @@ async function main() {
   // Create and run flow
   const searchAgentFlow = new Flow(decide);
   
-  const shared = {
+  const shared: SharedStore & { context: SearchResult[]; searchTerm: string | null } = {
     query: "Who won the Nobel Prize in Physics 2024?",
     context: [],
     answer: null,

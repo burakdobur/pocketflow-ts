@@ -66,13 +66,14 @@ class ChunkDocs extends BatchNode {
     return sentences.map(s => s.trim()).filter(s => s.length > 0);
   }
 
-  post(shared: SharedStore, prepRes: string[], execRes: string[][]): void {
+  post(shared: SharedStore, prepRes: string[], execRes: string[][]): string {
     const allChunks: string[] = [];
     for (const chunkList of execRes) {
       allChunks.push(...chunkList);
     }
     shared.allChunks = allChunks;
     console.log(`📝 Created ${allChunks.length} chunks`);
+    return "default";
   }
 }
 
@@ -85,26 +86,28 @@ class EmbedDocs extends BatchNode {
     return getEmbedding(chunk);
   }
 
-  post(shared: SharedStore, prepRes: string[], execRes: number[][]): void {
+  post(shared: SharedStore, prepRes: string[], execRes: number[][]): string {
     shared.allEmbeds = execRes;
     console.log(`🔢 Generated ${execRes.length} embeddings`);
+    return "default";
   }
 }
 
 class StoreIndex extends Node {
-  prep(shared: SharedStore): number[][] {
-    return shared.allEmbeds;
+  prep(shared: SharedStore): { allEmbeds: number[][]; allChunks: string[] } {
+    return { allEmbeds: shared.allEmbeds, allChunks: shared.allChunks };
   }
 
-  exec(allEmbeds: number[][]): VectorIndex {
+  exec({ allEmbeds, allChunks }: { allEmbeds: number[][]; allChunks: string[] }): VectorIndex {
     const index = createIndex(allEmbeds);
-    index.chunks = shared.allChunks;
+    index.chunks = allChunks;
     return index;
   }
 
-  post(shared: SharedStore, prepRes: number[][], index: VectorIndex): void {
+  post(shared: SharedStore, prepRes: { allEmbeds: number[][]; allChunks: string[] }, index: VectorIndex): string {
     shared.index = index;
     console.log("🗃️ Vector index created");
+    return "default";
   }
 }
 
@@ -119,8 +122,9 @@ class EmbedQuery extends Node {
     return getEmbedding(question);
   }
 
-  post(shared: SharedStore, prepRes: string, qEmb: number[]): void {
+  post(shared: SharedStore, prepRes: string, qEmb: number[]): string {
     shared.qEmb = qEmb;
+    return "default";
   }
 }
 
@@ -136,9 +140,10 @@ class RetrieveDocs extends Node {
     return relevantChunk;
   }
 
-  post(shared: SharedStore, prepRes: any, relevantChunk: string): void {
+  post(shared: SharedStore, prepRes: any, relevantChunk: string): string {
     shared.retrievedChunk = relevantChunk;
     console.log("🔍 Retrieved chunk:", relevantChunk.substring(0, 60) + "...");
+    return "default";
   }
 }
 
@@ -152,9 +157,10 @@ class GenerateAnswer extends Node {
     return callLLM(prompt);
   }
 
-  post(shared: SharedStore, prepRes: any, answer: string): void {
+  post(shared: SharedStore, prepRes: any, answer: string): string {
     shared.answer = answer;
     console.log("💡 Answer:", answer);
+    return "default";
   }
 }
 
@@ -171,7 +177,7 @@ async function main() {
   chain(chunkNode, embedNode, storeNode);
   const offlineFlow = new Flow(chunkNode);
 
-  const shared = {
+  const shared: SharedStore = {
     files: ["doc1.txt", "doc2.txt", "doc3.txt"],
     allChunks: [],
     allEmbeds: [],

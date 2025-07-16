@@ -12,9 +12,10 @@ class AnswerNode extends Node {
     return callLLM(question);
   }
 
-  post(shared: SharedStore, prepRes: string, execRes: string): void {
+  post(shared: SharedStore, prepRes: string, execRes: string): string {
     // Store the answer in shared
     shared.answer = execRes;
+    return "default";
   }
 }
 

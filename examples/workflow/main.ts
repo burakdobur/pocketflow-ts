@@ -11,9 +11,10 @@ class GenerateOutline extends Node {
     return callLLM(`Create a detailed outline for an article about ${topic}`);
   }
 
-  post(shared: SharedStore, prepRes: string, execRes: string): void {
+  post(shared: SharedStore, prepRes: string, execRes: string): string {
     shared.outline = execRes;
     console.log("✅ Outline generated");
+    return "default";
   }
 }
 
@@ -26,9 +27,10 @@ class WriteSection extends Node {
     return callLLM(`Write content based on this outline: ${outline}`);
   }
 
-  post(shared: SharedStore, prepRes: string, execRes: string): void {
+  post(shared: SharedStore, prepRes: string, execRes: string): string {
     shared.draft = execRes;
     console.log("✅ Draft written");
+    return "default";
   }
 }
 
@@ -41,9 +43,10 @@ class ReviewAndRefine extends Node {
     return callLLM(`Review and improve this draft: ${draft}`);
   }
 
-  post(shared: SharedStore, prepRes: string, execRes: string): void {
+  post(shared: SharedStore, prepRes: string, execRes: string): string {
     shared.finalArticle = execRes;
     console.log("✅ Article refined");
+    return "default";
   }
 }
 
@@ -58,8 +61,8 @@ async function main() {
 
   // Create and run flow
   const writingFlow = new Flow(outline);
-  
-  const shared = {
+
+  const shared: SharedStore = {
     topic: "AI Safety",
     outline: null,
     draft: null,
@@ -71,9 +74,9 @@ async function main() {
 
   console.log("\n📊 Results:");
   console.log("Topic:", shared.topic);
-  console.log("Outline:", shared.outline?.substring(0, 100) + "...");
-  console.log("Draft:", shared.draft?.substring(0, 100) + "...");
-  console.log("Final Article:", shared.finalArticle?.substring(0, 100) + "...");
+  console.log("Outline:", shared.outline ? shared.outline.substring(0, 100) + "..." : "N/A");
+  console.log("Draft:", shared.draft ? shared.draft.substring(0, 100) + "..." : "N/A");
+  console.log("Final Article:", shared.finalArticle ? shared.finalArticle.substring(0, 100) + "..." : "N/A");
 }
 
 if (require.main === module) {
