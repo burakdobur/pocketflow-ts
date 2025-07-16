@@ -1,0 +1,161 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Guidelines for using PocketFlow, Utility Function, Viz and Debug
+globs: 
+alwaysApply: false
+---
+# Visualization and Debugging
+
+Similar to LLM wrappers, we **don't** provide built-in visualization and debugging. Here, we recommend some *minimal* (and incomplete) implementations. These examples can serve as a starting point for your own tooling.
+
+## 1. Visualization with Mermaid
+
+This code recursively traverses the nested graph, assigns unique IDs to each node, and treats Flow nodes as subgraphs to generate Mermaid syntax for a hierarchical visualization.
+
+```typescript
+function buildMermaid(start: BaseNode): string {
+  const ids: Map<BaseNode, string> = new Map();
+  const visited: Set<BaseNode> = new Set();
+  const lines: string[] = ["graph LR"];
+  let ctr = 1;
+
+  function getId(node: BaseNode): string {
+    if (!ids.has(node)) {
+      ids.set(node, `N${ctr++}`);
+    }
+    return ids.get(node)!;
+  }
+
+  function link(a: string, b: string): void {
+    lines.push(`    ${a} --> ${b}`);
+  }
+
+  function walk(node: BaseNode, parent?: string): void {
+    if (visited.has(node)) {
+      if (parent) link(parent, getId(node));
+      return;
+    }
+    visited.add(node);
+
+    if (node instanceof Flow) {
+      const startNode = node.startNode;
+      if (startNode && parent) link(parent, getId(startNode));
+      lines.push(`\n    subgraph sub_flow_${getId(node)}[${node.constructor.name}]`);
+      if (startNode) walk(startNode);
+      for (const nxt of Object.values(node.successors)) {
+        if (startNode) walk(nxt, getId(startNode));
+        else if (parent) link(parent, getId(nxt));
+        else walk(nxt);
+      }
+      lines.push("    end\n");
+    } else {
+      const nid = getId(node);
+      lines.push(`    ${nid}['${node.constructor.name}']`);
+      if (parent) link(parent, nid);
+      for (const nxt of Object.values(node.successors)) {
+        walk(nxt, nid);
+      }
+    }
+  }
+
+  walk(start);
+  return lines.join("\n");
+}
+```
+
+For example, suppose we have a complex Flow for data science:
+
+```typescript
+class DataPrepBatchNode extends BatchNode {
+  prep(shared: SharedStore): any[] {
+    return [];
+  }
+}
+class ValidateDataNode extends Node {}
+class FeatureExtractionNode extends Node {}
+class TrainModelNode extends Node {}
+class EvaluateModelNode extends Node {}
+class ModelFlow extends Flow {}
+class DataScienceFlow extends Flow {}
+
+const featureNode = new FeatureExtractionNode();
+const trainNode = new TrainModelNode();
+const evaluateNode = new EvaluateModelNode();
+featureNode.connectTo(trainNode).connectTo(evaluateNode);
+const modelFlow = new ModelFlow(featureNode);
+const dataPrepNode = new DataPrepBatchNode();
+const validateNode = new ValidateDataNode();
+dataPrepNode.connectTo(validateNode).connectTo(modelFlow);
+const dataScienceFlow = new DataScienceFlow(dataPrepNode);
+const result = buildMermaid(dataScienceFlow);
+console.log(result);
+```
+
+The code generates a Mermaid diagram:
+
+```mermaid
+graph LR
+    subgraph sub_flow_N1[DataScienceFlow]
+    N2['DataPrepBatchNode']
+    N3['ValidateDataNode']
+    N2 --> N3
+    N3 --> N4
+
+    subgraph sub_flow_N5[ModelFlow]
+    N4['FeatureExtractionNode']
+    N6['TrainModelNode']
+    N4 --> N6
+    N7['EvaluateModelNode']
+    N6 --> N7
+    end
+
+    end
+```
+
+## 2. Call Stack Debugging
+
+It would be useful to print the Node call stacks for debugging. This can be achieved by inspecting the runtime call stack:
+
+```typescript
+function getNodeCallStack(): string[] {
+  const stack = new Error().stack?.split("\n") || [];
+  const nodeNames: string[] = [];
+  const seenIds = new Set<number>();
+
+  for (const line of stack) {
+    const match = line.match(/at (\w+)/);
+    if (match) {
+      const nodeName = match[1];
+      if (!seenIds.has(nodeName.hashCode())) {
+        seenIds.add(nodeName.hashCode());
+        nodeNames.push(nodeName);
+      }
+    }
+  }
+  return nodeNames;
+}
+
+class EvaluateModelNode extends Node {
+  prep(shared: SharedStore): void {
+    const stack = getNodeCallStack();
+    console.log("Call stack:", stack);
+  }
+}
+
+const featureNode = new FeatureExtractionNode();
+const trainNode = new TrainModelNode();
+const evaluateNode = new EvaluateModelNode();
+featureNode.connectTo(trainNode).connectTo(evaluateNode);
+const modelFlow = new ModelFlow(featureNode);
+const dataPrepNode = new DataPrepBatchNode();
+const validateNode = new ValidateDataNode();
+dataPrepNode.connectTo(validateNode).connectTo(modelFlow);
+const dataScienceFlow = new DataScienceFlow(dataPrepNode);
+dataScienceFlow.run({});
+```
+
+The output would be: `Call stack: ['EvaluateModelNode', 'ModelFlow', 'DataScienceFlow']`

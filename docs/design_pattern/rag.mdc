@@ -1,0 +1,163 @@
+---
+description: Guidelines for using PocketFlow, Design Pattern, RAG
+globs: 
+alwaysApply: false
+---
+# RAG (Retrieval Augmented Generation)
+
+For certain LLM tasks like answering questions, providing relevant context is essential. One common architecture is a **two-stage** RAG pipeline:
+
+1. **Offline stage**: Preprocess and index documents ("building the index").
+2. **Online stage**: Given a question, generate answers by retrieving the most relevant context.
+
+---
+## Stage 1: Offline Indexing
+
+We create three Nodes:
+1. `ChunkDocs` – [chunks](../utility_function/chunking.md) raw text.
+2. `EmbedDocs` – [embeds](../utility_function/embedding.md) each chunk.
+3. `StoreIndex` – stores embeddings into a [vector database](../utility_function/vector.md).
+
+```typescript
+class ChunkDocs extends BatchNode {
+  prep(shared: SharedStore): string[] {
+    return shared.files; // A list of file paths in shared["files"].
+  }
+
+  exec(filepath: string): string[] {
+    const text = readFile(filepath); // Read file content (error handling omitted).
+    const size = 100;
+    const chunks: string[] = [];
+    for (let i = 0; i < text.length; i += size) {
+      chunks.push(text.slice(i, i + size));
+    }
+    return chunks;
+  }
+
+  post(shared: SharedStore, _: any, execResList: string[][]): void {
+    shared.allChunks = execResList.flat(); // Flatten all chunk-lists into a single list.
+  }
+}
+
+class EmbedDocs extends BatchNode {
+  prep(shared: SharedStore): string[] {
+    return shared.allChunks;
+  }
+
+  exec(chunk: string): number[] {
+    return getEmbedding(chunk); // Generate embedding for the chunk.
+  }
+
+  post(shared: SharedStore, _: any, execResList: number[][]): void {
+    shared.allEmbeds = execResList;
+    console.log(`Total embeddings: ${execResList.length}`);
+  }
+}
+
+class StoreIndex extends Node {
+  prep(shared: SharedStore): number[][] {
+    return shared.allEmbeds;
+  }
+
+  exec(allEmbeds: number[][]): any {
+    return createIndex(allEmbeds); // Create a vector index (e.g., FAISS).
+  }
+
+  post(shared: SharedStore, _: any, index: any): void {
+    shared.index = index;
+  }
+}
+
+const chunkNode = new ChunkDocs();
+const embedNode = new EmbedDocs();
+const storeNode = new StoreIndex();
+
+chunkNode.connectTo(embedNode).connectTo(storeNode);
+
+const OfflineFlow = new Flow(chunkNode);
+```
+
+Usage example:
+
+```typescript
+const shared: SharedStore = {
+  files: ["doc1.txt", "doc2.txt"], // Any text files.
+};
+OfflineFlow.run(shared);
+```
+
+---
+## Stage 2: Online Query & Answer
+
+We have 3 nodes:
+1. `EmbedQuery` – embeds the user’s question.
+2. `RetrieveDocs` – retrieves top chunk from the index.
+3. `GenerateAnswer` – calls the LLM with the question + chunk to produce the final answer.
+
+```typescript
+class EmbedQuery extends Node {
+  prep(shared: SharedStore): string {
+    return shared.question;
+  }
+
+  exec(question: string): number[] {
+    return getEmbedding(question); // Generate embedding for the question.
+  }
+
+  post(shared: SharedStore, _: any, qEmb: number[]): void {
+    shared.qEmb = qEmb;
+  }
+}
+
+class RetrieveDocs extends Node {
+  prep(shared: SharedStore): [number[], any, string[]] {
+    return [shared.qEmb, shared.index, shared.allChunks];
+  }
+
+  exec([qEmb, index, chunks]: [number[], any, string[]]): string {
+    const [I, D] = searchIndex(index, qEmb, 1); // Retrieve top chunk.
+    const bestId = I[0][0];
+    return chunks[bestId];
+  }
+
+  post(shared: SharedStore, _: any, relevantChunk: string): void {
+    shared.retrievedChunk = relevantChunk;
+    console.log("Retrieved chunk:", relevantChunk.slice(0, 60), "...");
+  }
+}
+
+class GenerateAnswer extends Node {
+  prep(shared: SharedStore): [string, string] {
+    return [shared.question, shared.retrievedChunk];
+  }
+
+  exec([question, chunk]: [string, string]): string {
+    const prompt = `Question: ${question}\nContext: ${chunk}\nAnswer:`;
+    return callLLM(prompt);
+  }
+
+  post(shared: SharedStore, _: any, answer: string): void {
+    shared.answer = answer;
+    console.log("Answer:", answer);
+  }
+}
+
+const embedQNode = new EmbedQuery();
+const retrieveNode = new RetrieveDocs();
+const generateNode = new GenerateAnswer();
+
+embedQNode.connectTo(retrieveNode).connectTo(generateNode);
+
+const OnlineFlow = new Flow(embedQNode);
+```
+
+Usage example:
+
+```typescript
+// Suppose we already ran OfflineFlow and have:
+// shared["allChunks"], shared["index"], etc.
+shared.question = "Why do people like cats?";
+
+OnlineFlow.run(shared);
+// Final answer in shared["answer"].
+```

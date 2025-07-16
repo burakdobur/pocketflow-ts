@@ -1,0 +1,123 @@
+---
+description: Guidelines for using PocketFlow, Utility Function, Embedding
+globs: 
+alwaysApply: false
+---
+# Embedding
+
+Below you will find an overview table of various text embedding APIs, along with example TypeScript code.
+
+> Embedding is more a micro optimization, compared to the Flow Design.
+> 
+> It's recommended to start with the most convenient one and optimize later.
+{: .best-practice }
+
+| **API** | **Free Tier** | **Pricing Model** | **Docs** |
+| --- | --- | --- | --- |
+| **OpenAI** | ~$5 credit | ~$0.0001/1K tokens | [OpenAI Embeddings](https://platform.openai.com/docs/api-reference/embeddings) |
+| **Azure OpenAI** | $200 credit | Same as OpenAI (~$0.0001/1K tokens) | [Azure OpenAI Embeddings](https://learn.microsoft.com/azure/cognitive-services/openai/how-to/create-resource?tabs=portal) |
+| **Google Vertex AI** | $300 credit | ~$0.025 / million chars | [Vertex AI Embeddings](https://cloud.google.com/vertex-ai/docs/generative-ai/embeddings/get-text-embeddings) |
+| **AWS Bedrock** | No free tier, but AWS credits may apply | ~$0.00002/1K tokens (Titan V2) | [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/) |
+| **Cohere** | Limited free tier | ~$0.0001/1K tokens | [Cohere Embeddings](https://docs.cohere.com/docs/cohere-embed) |
+| **Hugging Face** | ~$0.10 free compute monthly | Pay per second of compute | [HF Inference API](https://huggingface.co/docs/api-inference) |
+| **Jina** | 1M tokens free | Pay per token after | [Jina Embeddings](https://jina.ai/embeddings/) |
+
+## Example TypeScript Code
+
+### 1. OpenAI
+```typescript
+import { Configuration, OpenAIApi } from "openai";
+
+const configuration = new Configuration({ apiKey: "YOUR_API_KEY" });
+const openai = new OpenAIApi(configuration);
+
+async function getOpenAIEmbedding(text: string): Promise<number[]> {
+  const response = await openai.createEmbedding({
+    model: "text-embedding-ada-002",
+    input: text,
+  });
+  return response.data.data[0].embedding;
+}
+```
+
+### 2. Azure OpenAI
+```typescript
+import axios from "axios";
+
+async function getAzureEmbedding(text: string): Promise<number[]> {
+  const response = await axios.post(
+    "https://YOUR_RESOURCE_NAME.openai.azure.com/openai/deployments/ada-embedding/embeddings?api-version=2023-03-15-preview",
+    { input: text },
+    { headers: { "api-key": "YOUR_AZURE_API_KEY" } }
+  );
+  return response.data.data[0].embedding;
+}
+```
+
+### 3. Google Vertex AI
+```typescript
+import { TextEmbeddingModel } from "@google-cloud/vertex-ai";
+
+async function getGoogleEmbedding(text: string): Promise<number[]> {
+  const model = new TextEmbeddingModel("textembedding-gecko@001");
+  const [embedding] = await model.getEmbeddings([text]);
+  return embedding;
+}
+```
+
+### 4. AWS Bedrock
+```typescript
+import { BedrockClient, InvokeModelCommand } from "@aws-sdk/client-bedrock";
+
+async function getAWSBedrockEmbedding(text: string): Promise<number[]> {
+  const client = new BedrockClient({ region: "us-east-1" });
+  const command = new InvokeModelCommand({
+    modelId: "amazon.titan-embed-text-v2:0",
+    contentType: "application/json",
+    body: JSON.stringify({ inputText: text }),
+  });
+  const response = await client.send(command);
+  return JSON.parse(response.body.toString()).embedding;
+}
+```
+
+### 5. Cohere
+```typescript
+import Cohere from "cohere-ai";
+
+Cohere.init("YOUR_API_KEY");
+
+async function getCohereEmbedding(text: string): Promise<number[]> {
+  const response = await Cohere.embed({ texts: [text] });
+  return response.body.embeddings[0];
+}
+```
+
+### 6. Hugging Face
+```typescript
+import axios from "axios";
+
+async function getHuggingFaceEmbedding(text: string): Promise<number[]> {
+  const response = await axios.post(
+    "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2",
+    { inputs: text },
+    { headers: { Authorization: "Bearer YOUR_HF_TOKEN" } }
+  );
+  return response.data[0];
+}
+```
+
+### 7. Jina
+```typescript
+import axios from "axios";
+
+async function getJinaEmbedding(text: string): Promise<number[]> {
+  const response = await axios.post(
+    "https://api.jina.ai/v2/embed",
+    { data: [text], model: "jina-embeddings-v3" },
+    { headers: { Authorization: "Bearer YOUR_JINA_TOKEN" } }
+  );
+  return response.data.data[0].embedding;
+}
+```
+

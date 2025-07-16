@@ -1,0 +1,217 @@
+---
+description: Guidelines for using PocketFlow, Utility Function, Vector Databases
+globs: 
+alwaysApply: false
+---
+# Vector Databases
+
+
+Below is a  table of the popular vector search solutions:
+
+| **Tool** | **Free Tier** | **Pricing Model** | **Docs** |
+| --- | --- | --- | --- |
+| **FAISS** | N/A, self-host | Open-source | [Faiss.ai](https://faiss.ai) |
+| **Pinecone** | 2GB free | From $25/mo | [pinecone.io](https://pinecone.io) |
+| **Qdrant** | 1GB free cloud | Pay-as-you-go | [qdrant.tech](https://qdrant.tech) |
+| **Weaviate** | 14-day sandbox | From $25/mo | [weaviate.io](https://weaviate.io) |
+| **Milvus** | 5GB free cloud | PAYG or $99/mo dedicated | [milvus.io](https://milvus.io) |
+| **Chroma** | N/A, self-host | Free (Apache 2.0) | [trychroma.com](https://trychroma.com) |
+| **Redis** | 30MB free | From $5/mo | [redis.io](https://redis.io) |
+
+---
+## Example TypeScript Code
+
+Below are basic usage snippets for each tool.
+
+### FAISS
+```typescript
+import * as faiss from "faiss";
+
+const d = 128; // Dimensionality of embeddings
+const index = new faiss.IndexFlatL2(d);
+
+// Random vectors
+const data = Array.from({ length: 1000 }, () => Array(d).fill(Math.random()));
+index.add(data);
+
+// Query
+const query = Array(d).fill(Math.random());
+const { distances, indices } = index.search(query, 5);
+
+console.log("Distances:", distances);
+console.log("Neighbors:", indices);
+```
+
+### Pinecone
+```typescript
+import { PineconeClient } from "@pinecone-database/pinecone";
+
+const client = new PineconeClient();
+await client.init({ apiKey: "YOUR_API_KEY", environment: "YOUR_ENV" });
+
+const indexName = "my-index";
+
+// Create the index if it doesn't exist
+if (!(await client.listIndexes()).includes(indexName)) {
+  await client.createIndex({ name: indexName, dimension: 128 });
+}
+
+const index = client.Index(indexName);
+
+// Upsert
+await index.upsert([
+  { id: "id1", values: Array(128).fill(0.1) },
+  { id: "id2", values: Array(128).fill(0.2) },
+]);
+
+// Query
+const response = await index.query({
+  vector: Array(128).fill(0.15),
+  topK: 3,
+});
+console.log(response);
+```
+
+### Qdrant
+```typescript
+import { QdrantClient } from "qdrant-client";
+
+const client = new QdrantClient({
+  url: "https://YOUR-QDRANT-CLOUD-ENDPOINT",
+  apiKey: "YOUR_API_KEY",
+});
+
+const collection = "my_collection";
+await client.recreateCollection({
+  collection_name: collection,
+  vectors: { size: 128, distance: "Cosine" },
+});
+
+await client.upsert({
+  collection_name: collection,
+  points: [
+    { id: "1", vector: Array(128).fill(0.1), payload: { type: "doc1" } },
+    { id: "2", vector: Array(128).fill(0.2), payload: { type: "doc2" } },
+  ],
+});
+
+const results = await client.search({
+  collection_name: collection,
+  vector: Array(128).fill(0.15),
+  limit: 2,
+});
+console.log(results);
+```
+
+### Weaviate
+```typescript
+import weaviate from "weaviate-client";
+
+const client = weaviate.client({
+  scheme: "https",
+  host: "YOUR-WEAVIATE-CLOUD-ENDPOINT",
+});
+
+await client.schema.classCreator().withClass({
+  class: "Article",
+  vectorizer: "none",
+}).do();
+
+await client.data.creator().withClassName("Article").withProperties({
+  title: "Hello World",
+  content: "Weaviate vector search",
+}).withVector(Array(128).fill(0.1)).do();
+
+const resp = await client.graphql.get().withClassName("Article").withFields(["title", "content"]).withNearVector({
+  vector: Array(128).fill(0.15),
+}).withLimit(3).do();
+console.log(resp);
+```
+
+### Milvus
+```typescript
+import { MilvusClient } from "@zilliz/milvus2-sdk-node";
+
+const client = new MilvusClient("localhost:19530");
+
+await client.createCollection({
+  collection_name: "MyCollection",
+  fields: [
+    { name: "id", data_type: "Int64", is_primary_key: true },
+    { name: "embedding", data_type: "FloatVector", dim: 128 },
+  ],
+});
+
+const embeddings = Array.from({ length: 10 }, () => Array(128).fill(Math.random()));
+const ids = Array.from({ length: 10 }, (_, i) => i);
+await client.insert({
+  collection_name: "MyCollection",
+  fields_data: ids.map((id, i) => ({ id, embedding: embeddings[i] })),
+});
+
+await client.createIndex({
+  collection_name: "MyCollection",
+  field_name: "embedding",
+  index_type: "IVF_FLAT",
+  params: { nlist: 128 },
+});
+
+const queryEmb = Array(128).fill(Math.random());
+const results = await client.search({
+  collection_name: "MyCollection",
+  vectors: [queryEmb],
+  params: { nprobe: 10 },
+  limit: 3,
+});
+console.log(results);
+```
+
+### Chroma
+```typescript
+import { ChromaClient } from "chromadb";
+
+const client = new ChromaClient({
+  persistDirectory: "./chroma_data",
+});
+
+const collection = await client.createCollection("my_collection");
+
+await collection.add({
+  embeddings: [[0.1, 0.2, 0.3], [0.2, 0.2, 0.2]],
+  metadatas: [{ doc: "text1" }, { doc: "text2" }],
+  ids: ["id1", "id2"],
+});
+
+const res = await collection.query({
+  query_embeddings: [[0.15, 0.25, 0.3]],
+  n_results: 2,
+});
+console.log(res);
+```
+
+### Redis
+```typescript
+import { createClient } from "redis";
+
+const client = createClient();
+await client.connect();
+
+await client.ft.create("my_idx", {
+  embedding: {
+    type: "VECTOR",
+    ALGORITHM: "FLAT",
+    DIM: 128,
+    DISTANCE_METRIC: "L2",
+  },
+});
+
+const vec = Array(128).fill(0.1);
+await client.hSet("doc1", { embedding: JSON.stringify(vec) });
+
+const qvec = Array(128).fill(0.15);
+const res = await client.ft.search("my_idx", `*=>[KNN 3 @embedding $BLOB AS dist]`, {
+  PARAMS: { BLOB: JSON.stringify(qvec) },
+});
+console.log(res);
+```
+

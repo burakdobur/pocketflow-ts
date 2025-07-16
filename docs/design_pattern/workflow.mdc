@@ -1,0 +1,74 @@
+---
+description: Guidelines for using PocketFlow, Design Pattern, Workflow
+globs: 
+alwaysApply: false
+---
+# Workflow
+
+Many real-world tasks are too complex for one LLM call. The solution is to **Task Decomposition**: decompose them into a [chain](../core_abstraction/flow.md) of multiple Nodes.
+
+> - You don't want to make each task **too coarse**, because it may be *too complex for one LLM call*.
+> - You don't want to make each task **too granular**, because then *the LLM call doesn't have enough context* and results are *not consistent across nodes*.
+> 
+> You usually need multiple *iterations* to find the *sweet spot*. If the task has too many *edge cases*, consider using [Agents](mdc:./agent.md).
+{: .best-practice }
+
+### Example: Article Writing
+
+```typescript
+class GenerateOutline extends Node {
+  prep(shared: SharedStore): string {
+    return shared.topic;
+  }
+
+  exec(topic: string): string {
+    return callLLM(`Create a detailed outline for an article about ${topic}`);
+  }
+
+  post(shared: SharedStore, _: any, execRes: string): void {
+    shared.outline = execRes;
+  }
+}
+
+class WriteSection extends Node {
+  prep(shared: SharedStore): string {
+    return shared.outline;
+  }
+
+  exec(outline: string): string {
+    return callLLM(`Write content based on this outline: ${outline}`);
+  }
+
+  post(shared: SharedStore, _: any, execRes: string): void {
+    shared.draft = execRes;
+  }
+}
+
+class ReviewAndRefine extends Node {
+  prep(shared: SharedStore): string {
+    return shared.draft;
+  }
+
+  exec(draft: string): string {
+    return callLLM(`Review and improve this draft: ${draft}`);
+  }
+
+  post(shared: SharedStore, _: any, execRes: string): void {
+    shared.finalArticle = execRes;
+  }
+}
+
+// Connect nodes
+const outline = new GenerateOutline();
+const write = new WriteSection();
+const review = new ReviewAndRefine();
+
+outline.connectTo(write).connectTo(review);
+
+// Create and run flow
+const writingFlow = new Flow(outline);
+const shared: SharedStore = { topic: "AI Safety" };
+writingFlow.run(shared);
+```
+
+For *dynamic cases*, consider using [Agents](mdc:./agent.md).

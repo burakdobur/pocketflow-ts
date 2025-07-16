@@ -1,0 +1,92 @@
+---
+description: Guidelines for using PocketFlow, Utility Function, Web Search
+globs: 
+alwaysApply: false
+---
+# Web Search
+
+We recommend some implementations of commonly used web search tools.
+
+| **API**                         | **Free Tier**                                | **Pricing Model**                                              | **Docs**                                                  |
+|---------------------------------|-----------------------------------------------|-----------------------------------------------------------------|------------------------------------------------------------------------|
+| **Google Custom Search JSON API** | 100 queries/day free       | $5 per 1000 queries.           | [Link](https://developers.google.com/custom-search/v1/overview)        |
+| **Bing Web Search API**         | 1,000 queries/month               | $15–$25 per 1,000 queries. | [Link](https://azure.microsoft.com/en-us/services/cognitive-services/bing-web-search-api/) |
+| **DuckDuckGo Instant Answer**   | Completely free (Instant Answers only, **no URLs**) | No paid plans; usage unlimited, but data is limited             | [Link](https://duckduckgo.com/api)                                     |
+| **Brave Search API**         | 2,000 queries/month free | $3 per 1k queries for Base, $5 per 1k for Pro | [Link](https://brave.com/search/api/)                                  |
+| **SerpApi**              | 100 searches/month free            | Start at $75/month for 5,000 searches| [Link](https://serpapi.com/)                                             |
+| **RapidAPI**           | Many  options    | Many  options             | [Link](https://rapidapi.com/search?term=search&sortBy=ByRelevance)      |
+
+## Example TypeScript Code
+
+### 1. Google Custom Search JSON API
+```typescript
+import axios from "axios";
+
+const API_KEY = "YOUR_API_KEY";
+const CX_ID = "YOUR_CX_ID";
+
+async function googleSearch(query: string): Promise<any> {
+  const url = "https://www.googleapis.com/customsearch/v1";
+  const params = { key: API_KEY, cx: CX_ID, q: query };
+  const response = await axios.get(url, { params });
+  return response.data;
+}
+```
+
+### 2. Bing Web Search API
+```typescript
+import axios from "axios";
+
+const SUBSCRIPTION_KEY = "YOUR_BING_API_KEY";
+
+async function bingSearch(query: string): Promise<any> {
+  const url = "https://api.bing.microsoft.com/v7.0/search";
+  const headers = { "Ocp-Apim-Subscription-Key": SUBSCRIPTION_KEY };
+  const params = { q: query };
+  const response = await axios.get(url, { headers, params });
+  return response.data;
+}
+```
+
+### 3. DuckDuckGo Instant Answer
+```typescript
+import axios from "axios";
+
+async function duckDuckGoSearch(query: string): Promise<any> {
+  const url = "https://api.duckduckgo.com/";
+  const params = { q: query, format: "json" };
+  const response = await axios.get(url, { params });
+  return response.data;
+}
+```
+
+### 4. Brave Search API
+```typescript
+import axios from "axios";
+
+const SUBSCRIPTION_TOKEN = "YOUR_BRAVE_API_TOKEN";
+
+async function braveSearch(query: string): Promise<any> {
+  const url = "https://api.search.brave.com/res/v1/web/search";
+  const headers = { "X-Subscription-Token": SUBSCRIPTION_TOKEN };
+  const params = { q: query };
+  const response = await axios.get(url, { headers, params });
+  return response.data;
+}
+```
+
+### 5. SerpApi
+```typescript
+import axios from "axios";
+
+const API_KEY = "YOUR_SERPAPI_KEY";
+
+async function serpApiSearch(query: string): Promise<any> {
+  const url = "https://serpapi.com/search";
+  const params = { engine: "google", q: query, api_key: API_KEY };
+  const response = await axios.get(url, { params });
+  return response.data;
+}
+```
+
+

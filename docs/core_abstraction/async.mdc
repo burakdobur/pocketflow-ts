@@ -1,0 +1,59 @@
+---
+description: Guidelines for using PocketFlow, Core Abstraction, (Advanced) Async
+globs: 
+alwaysApply: false
+---
+# (Advanced) Async
+
+**Async** Nodes implement `prepAsync()`, `execAsync()`, `execFallbackAsync()`, and/or `postAsync()`. This is useful for:
+
+1. **prepAsync()**: For *fetching/reading data (files, APIs, DB)* in an I/O-friendly way.
+2. **execAsync()**: Typically used for async LLM calls.
+3. **postAsync()**: For *awaiting user feedback*, *coordinating across multi-agents* or any additional async steps after `execAsync()`.
+
+**Note**: `AsyncNode` must be wrapped in `AsyncFlow`. `AsyncFlow` can also include regular (sync) nodes.
+
+### Example
+
+```typescript
+class SummarizeThenVerify extends AsyncNode {
+  async prepAsync(shared: SharedStore): Promise<string> {
+    // Example: read a file asynchronously
+    const docText = await readFileAsync(shared.docPath);
+    return docText;
+  }
+
+  async execAsync(prepRes: string): Promise<string> {
+    // Example: async LLM call
+    const summary = await callLLMAsync(`Summarize: ${prepRes}`);
+    return summary;
+  }
+
+  async postAsync(shared: SharedStore, prepRes: string, execRes: string): Promise<string> {
+    // Example: wait for user feedback
+    const decision = await gatherUserFeedback(execRes);
+    if (decision === "approve") {
+      shared.summary = execRes;
+      return "approve";
+    }
+    return "deny";
+  }
+}
+
+const summarizeNode = new SummarizeThenVerify();
+const finalNode = new Node();
+
+// Define transitions
+summarizeNode.connectTo(finalNode, "approve");
+summarizeNode.connectTo(summarizeNode, "deny"); // retry
+
+const flow = new AsyncFlow(summarizeNode);
+
+async function main(): Promise<void> {
+  const shared: SharedStore = { docPath: "document.txt" };
+  await flow.runAsync(shared);
+  console.log("Final Summary:", shared.summary);
+}
+
+main();
+```

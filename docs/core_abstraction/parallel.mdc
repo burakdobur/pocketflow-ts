@@ -1,0 +1,60 @@
+---
+description: Guidelines for using PocketFlow, Core Abstraction, (Advanced) Parallel
+globs: 
+alwaysApply: false
+---
+# (Advanced) Parallel
+
+**Parallel** Nodes and Flows let you run multiple **Async** Nodes and Flows  **concurrently**—for example, summarizing multiple texts at once. This can improve performance by overlapping I/O and compute. 
+
+> Because of JavaScript's event loop, parallel nodes and flows excel at overlapping I/O-bound work—like LLM calls, database queries, API requests, or file I/O.
+{: .warning }
+
+> - **Ensure Tasks Are Independent**: If each item depends on the output of a previous item, **do not** parallelize.
+> 
+> - **Beware of Rate Limits**: Parallel calls can **quickly** trigger rate limits on LLM services. You may need a **throttling** mechanism (e.g., semaphores or sleep intervals).
+> 
+> - **Consider Single-Node Batch APIs**: Some LLMs offer a **batch inference** API where you can send multiple prompts in a single call. This is more complex to implement but can be more efficient than launching many parallel requests and mitigates rate limits.
+{: .best-practice }
+
+## AsyncParallelBatchNode
+
+Like **AsyncBatchNode**, but runs `execAsync()` in **parallel**:
+
+```typescript
+class ParallelSummaries extends AsyncParallelBatchNode {
+  async prepAsync(shared: SharedStore): Promise<string[]> {
+    // e.g., multiple texts
+    return shared.texts;
+  }
+
+  async execAsync(text: string): Promise<string> {
+    const prompt = `Summarize: ${text}`;
+    return await callLLMAsync(prompt);
+  }
+
+  async postAsync(shared: SharedStore, prepRes: string[], execResList: string[]): Promise<string> {
+    shared.summary = execResList.join("\n\n");
+    return "default";
+  }
+}
+
+const node = new ParallelSummaries();
+const flow = new AsyncFlow(node);
+```
+
+## AsyncParallelBatchFlow
+
+Parallel version of **BatchFlow**. Each iteration of the sub-flow runs **concurrently** using different parameters:
+
+```typescript
+class SummarizeMultipleFiles extends AsyncParallelBatchFlow {
+  async prepAsync(shared: SharedStore): Promise<Record<string, string>[]> {
+    return shared.files.map((file: string) => ({ filename: file }));
+  }
+}
+
+const subFlow = new AsyncFlow(new LoadAndSummarizeFile());
+const parallelFlow = new SummarizeMultipleFiles(subFlow);
+await parallelFlow.runAsync(shared);
+```

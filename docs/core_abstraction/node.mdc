@@ -1,0 +1,107 @@
+---
+description: Guidelines for using PocketFlow, Core Abstraction, Node
+globs: 
+alwaysApply: false
+---
+# Node
+
+A **Node** is the smallest building block. Each Node has 3 steps `prep->exec->post`:
+
+1. `prep(shared)`
+   - **Read and preprocess data** from `shared` store. 
+   - Examples: *query DB, read files, or serialize data into a string*.
+   - Return `prepRes`, which is used by `exec()` and `post()`.
+
+2. `exec(prepRes)`
+   - **Execute compute logic**, with optional retries and error handling (below).
+   - Examples: *(mostly) LLM calls, remote APIs, tool use*.
+   - ⚠️ This shall be only for compute and **NOT** access `shared`.
+   - ⚠️ If retries enabled, ensure idempotent implementation.
+   - Return `execRes`, which is passed to `post()`.
+
+3. `post(shared, prepRes, execRes)`
+   - **Postprocess and write data** back to `shared`.
+   - Examples: *update DB, change states, log results*.
+   - **Decide the next action** by returning a *string* (`action = "default"` if *None*).
+
+> **Why 3 steps?** To enforce the principle of *separation of concerns*. The data storage and data processing are operated separately.
+>
+> All steps are *optional*. E.g., you can only implement `prep` and `post` if you just need to process data.
+{: .note }
+
+### Fault Tolerance & Retries
+
+You can **retry** `exec()` if it raises an exception via two parameters when defining the Node:
+
+- `maxRetries` (number): Max times to run `exec()`. The default is `1` (**no** retry).
+- `wait` (number): The time to wait (in **seconds**) before the next retry. By default, `wait=0` (no waiting). 
+`wait` is helpful when you encounter rate-limits or quota errors from your LLM provider and need to back off.
+
+```typescript
+const myNode = new SummarizeFile(3, 10); // maxRetries=3, wait=10 seconds
+```
+
+When an exception occurs in `exec()`, the Node automatically retries until:
+
+- It either succeeds, or
+- The Node has retried `maxRetries - 1` times already and fails on the last attempt.
+
+You can get the current retry times (0-based) from `this.curRetry`.
+
+```typescript
+class RetryNode extends Node {
+  exec(prepRes: any): any {
+    console.log(`Retry ${this.curRetry} times`);
+    throw new Error("Failed");
+  }
+}
+```
+
+### Graceful Fallback
+
+To **gracefully handle** the exception (after all retries) rather than raising it, override:
+
+```typescript
+execFallback(prepRes: any, exc: Error): any {
+  throw exc;
+}
+```
+
+By default, it just re-raises the exception. But you can return a fallback result instead, which becomes the `execRes` passed to `post()`.
+
+### Example: Summarize file
+
+```typescript
+class SummarizeFile extends Node {
+  prep(shared: SharedStore): string {
+    return shared.data;
+  }
+
+  exec(prepRes: string): string {
+    if (!prepRes) {
+      return "Empty file content";
+    }
+    const prompt = `Summarize this text in 10 words: ${prepRes}`;
+    return callLLM(prompt); // might fail
+  }
+
+  execFallback(prepRes: string, exc: Error): string {
+    // Provide a simple fallback instead of crashing
+    return "There was an error processing your request.";
+  }
+
+  post(shared: SharedStore, prepRes: string, execRes: string): void {
+    shared.summary = execRes;
+    // Return "default" by not returning
+  }
+}
+
+const summarizeNode = new SummarizeFile(3); // maxRetries=3
+
+// node.run() calls prep->exec->post
+// If exec() fails, it retries up to 3 times before calling execFallback()
+const actionResult = summarizeNode.run(shared);
+
+console.log("Action returned:", actionResult); // "default"
+console.log("Summary stored:", shared.summary);
+```
