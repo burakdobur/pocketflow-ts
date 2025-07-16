@@ -297,7 +297,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Related Projects
 
-- [PocketFlow (Python)](https://github.com/burakdobur/pocketflow-ts) - Original Python implementation
+- [PocketFlow (Python)](https://github.com/The-Pocket/PocketFlow) - Original Python implementation
 - [PocketFlow Documentation](https://the-pocket.github.io/PocketFlow/) - Comprehensive guides and examples
 
 ---
