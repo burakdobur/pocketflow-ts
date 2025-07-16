@@ -265,7 +265,7 @@ describe('PocketFlow TypeScript', () => {
       const node1 = new TestNode();
       const node2 = new TestNode();
       
-      node1.rshift(node2);
+      node1.connectTo(node2);
       
       expect(node1.successors.default).toBe(node2);
     });
@@ -274,7 +274,7 @@ describe('PocketFlow TypeScript', () => {
       const node1 = new TestNode();
       const node2 = new TestNode();
       
-      node1.sub('custom').rshift(node2);
+      node1.onAction('custom').connectTo(node2);
       
       expect(node1.successors.custom).toBe(node2);
     });
@@ -283,7 +283,7 @@ describe('PocketFlow TypeScript', () => {
       const node = new TestNode();
       
       expect(() => {
-        (node as any).sub(123);
+        (node as any).onAction(123);
       }).toThrow('Action must be a string');
     });
   });

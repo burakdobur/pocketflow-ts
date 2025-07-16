@@ -65,11 +65,11 @@ export abstract class BaseNode {
   }
 
   // Operator overloading equivalent using methods
-  rshift(other: BaseNode): BaseNode {
+  connectTo(other: BaseNode): BaseNode {
     return this.next(other);
   }
 
-  sub(action: string): ConditionalTransition {
+  onAction(action: string): ConditionalTransition {
     if (typeof action !== 'string') {
       throw new TypeError("Action must be a string");
     }
@@ -80,7 +80,7 @@ export abstract class BaseNode {
 class ConditionalTransition {
   constructor(public src: BaseNode, public action: string) {}
 
-  rshift(tgt: BaseNode): BaseNode {
+  connectTo(tgt: BaseNode): BaseNode {
     return this.src.next(tgt, this.action);
   }
 }
@@ -307,13 +307,13 @@ export class AsyncParallelBatchFlow extends AsyncFlow {
 export function chain(first: BaseNode, ...rest: BaseNode[]): BaseNode {
   let current = first;
   for (const next of rest) {
-    current.rshift(next);
+    current.connectTo(next);
     current = next;
   }
   return first;
 }
 
 export function branch(node: BaseNode, action: string, target: BaseNode): BaseNode {
-  node.sub(action).rshift(target);
+  node.onAction(action).connectTo(target);
   return node;
 }

@@ -257,41 +257,6 @@ class ParallelProcess extends AsyncParallelBatchNode {
 }
 ```
 
-## Examples
-
-Run the included examples:
-
-```bash
-# Install dependencies
-npm install
-
-# Run examples
-npm run example:hello-world
-npm run example:workflow
-npm run example:agent
-npm run example:batch
-npm run example:rag
-```
-
-## Project Structure
-
-```
-pocketflow-ts/
-├── src/
-│   └── index.ts          # Core framework (~200 lines)
-├── examples/
-│   ├── hello-world/      # Basic usage
-│   ├── workflow/         # Sequential processing
-│   ├── agent/            # Decision making
-│   ├── batch/            # Map-reduce processing
-│   ├── rag/              # Retrieval augmented generation
-│   └── utils/
-│       └── callLLM.ts    # LLM utility functions
-├── package.json
-├── tsconfig.json
-└── README.md
-```
-
 ## Comparison with Python Version
 
 | Feature | Python | TypeScript |
@@ -315,8 +280,8 @@ node_a - "action" >> node_c
 chain(nodeA, nodeB)
 branch(nodeA, "action", nodeC)
 // or
-nodeA.rshift(nodeB)
-nodeA.sub("action").rshift(nodeC)
+nodeA.connectTo(nodeB)
+nodeA.onAction("action").connectTo(nodeC)
 ```
 
 ## Contributing
@@ -332,7 +297,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Related Projects
 
-- [PocketFlow (Python)](https://github.com/The-Pocket/PocketFlow) - Original Python implementation
+- [PocketFlow (Python)](https://github.com/burakdobur/pocketflow-ts) - Original Python implementation
 - [PocketFlow Documentation](https://the-pocket.github.io/PocketFlow/) - Comprehensive guides and examples
 
 ---

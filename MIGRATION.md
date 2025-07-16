@@ -76,7 +76,7 @@ import { chain } from 'pocketflow-ts';
 
 chain(nodeA, nodeB, nodeC);
 // or manually:
-nodeA.rshift(nodeB).rshift(nodeC);
+nodeA.connectTo(nodeB).connectTo(nodeC);
 
 const flow = new Flow(nodeA);
 ```
@@ -96,8 +96,8 @@ import { branch } from 'pocketflow-ts';
 branch(decide, "success", successNode);
 branch(decide, "error", errorNode);
 // or manually:
-decide.sub("success").rshift(successNode);
-decide.sub("error").rshift(errorNode);
+decide.onAction("success").connectTo(successNode);
+decide.onAction("error").connectTo(errorNode);
 ```
 
 ## Running Flows
