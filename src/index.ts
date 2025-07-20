@@ -118,6 +118,12 @@ export class Node extends BaseNode {
       }
     }
   }
+
+  protected _run(shared: SharedStore): Action {
+    const p = this.prep(shared);
+    const e = this._exec(p);
+    return this.post(shared, p, e);
+  }
 }
 
 export class BatchNode extends Node {
