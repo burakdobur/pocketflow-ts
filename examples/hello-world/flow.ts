@@ -1,18 +1,18 @@
-import { Node, Flow, SharedStore } from '../../src/index';
-import { callLLM } from '../utils/callLLM';
+import { Flow, SharedStore, Action, AsyncNode } from '../../src/index';
+import { callLLMAsync } from '../utils/callLLM';
 
 // An example node and flow
-class AnswerNode extends Node {
+class AnswerNode extends AsyncNode {
   prep(shared: SharedStore): string {
     // Read question from shared
     return shared.question;
   }
 
-  exec(question: string): string {
-    return callLLM(question);
+  async exec(question: string): Promise<string> {
+    return await callLLMAsync(question);
   }
 
-  post(shared: SharedStore, prepRes: string, execRes: string): string {
+  post(shared: SharedStore, prepRes: string, execRes: string): Action {
     // Store the answer in shared
     shared.answer = execRes;
     return "default";

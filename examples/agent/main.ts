@@ -1,5 +1,5 @@
-import { Node, Flow, SharedStore, branch } from '../../src/index';
-import { callLLM } from '../utils/callLLM';
+import { Node, Flow, SharedStore, branch, Action } from '../../src/index';
+import { callLLM, callLLMAsync } from '../utils/callLLM';
 
 interface SearchResult {
   term: string;
@@ -13,7 +13,7 @@ function searchWeb(term: string): string {
     "universe end": "Current theories suggest the universe will end in heat death, where entropy reaches maximum.",
     "default": `Search results for "${term}": Mock result showing relevant information.`
   };
-  
+
   return mockResults[term] || mockResults["default"];
 }
 
@@ -24,8 +24,8 @@ class DecideAction extends Node {
     return [query, context];
   }
 
-  exec([query, context]: [string, SearchResult[]]): any {
-    const contextStr = context.length > 0 
+  async exec([query, context]: [string, SearchResult[]]): Promise<any> {
+    const contextStr = context.length > 0
       ? context.map(r => `${r.term}: ${r.result}`).join('\n')
       : "No previous search";
 
@@ -42,8 +42,8 @@ Output in JSON format:
   "search_term": "search phrase if action is search"
 }`;
 
-    const response = callLLM(prompt);
-    
+    const response = await callLLMAsync(prompt);
+
     // Parse mock response
     try {
       return JSON.parse(response);
@@ -64,7 +64,7 @@ Output in JSON format:
     }
   }
 
-  post(shared: SharedStore, prepRes: any, execRes: any): string {
+  post(shared: SharedStore, prepRes: any, execRes: any): Action {
     if (execRes.action === "search") {
       shared.searchTerm = execRes.search_term;
     }
@@ -122,7 +122,7 @@ async function main() {
 
   // Create and run flow
   const searchAgentFlow = new Flow(decide);
-  
+
   const shared: SharedStore & { context: SearchResult[]; searchTerm: string | null } = {
     query: "Who won the Nobel Prize in Physics 2024?",
     context: [],
@@ -132,7 +132,7 @@ async function main() {
 
   console.log("🤖 Starting search agent...");
   console.log("❓ Question:", shared.query);
-  
+
   searchAgentFlow.run(shared);
 
   console.log("\n📊 Final Results:");

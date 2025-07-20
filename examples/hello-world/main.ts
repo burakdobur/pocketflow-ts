@@ -3,13 +3,13 @@ import { qaFlow } from './flow';
 // Example main function
 async function main() {
   const shared = {
-    question: "In one sentence, what's the end of universe?",
+    question: "What is the meaning of life?",
     answer: null
   };
 
-  qaFlow.run(shared);
-  console.log("Question:", shared.question);
-  console.log("Answer:", shared.answer);
+  const result = await qaFlow.runAsync(shared);
+  shared.answer = result.answer;
+  console.log(shared.answer);
 }
 
 if (require.main === module) {

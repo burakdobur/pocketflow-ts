@@ -1,7 +1,9 @@
 import OpenAI from 'openai';
 
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || 'YOUR_API_KEY_HERE'
+  apiKey: process.env.OPENAI_API_KEY,
+  baseURL: process.env.OPENAI_API_BASE_URL || 'https://aig.quaservices.com',
+  timeout: 10000, // Set a timeout for requests
 });
 
 export function callLLM(prompt: string): string {
@@ -28,7 +30,7 @@ export async function callLLMAsync(prompt: string): Promise<string> {
 
   try {
     const response = await client.chat.completions.create({
-      model: "gpt-4",
+      model: "openai/gpt-4.1",
       messages: [{ role: "user", content: prompt }]
     });
 

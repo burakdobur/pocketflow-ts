@@ -1,4 +1,4 @@
-import { BatchNode, Node, Flow, SharedStore, chain } from '../../src/index';
+import { BatchNode, Node, Flow, SharedStore, chain, Action } from '../../src/index';
 import { callLLM } from '../utils/callLLM';
 
 // Example: Document Summarization using Map-Reduce pattern
@@ -14,9 +14,10 @@ class SummarizeAllFiles extends BatchNode {
     return [filename, summary];
   }
 
-  post(shared: SharedStore, prepRes: [string, string][], execRes: [string, string][]): void {
+  post(shared: SharedStore, prepRes: [string, string][], execRes: [string, string][]): Action {
     shared.fileSummaries = Object.fromEntries(execRes);
     console.log(`✅ Processed ${execRes.length} files`);
+    return; // or return null; or return someAction;
   }
 }
 
@@ -35,9 +36,10 @@ class CombineSummaries extends Node {
     return callLLM(`Combine these file summaries into one final summary:\n${bigText}`);
   }
 
-  post(shared: SharedStore, prepRes: Record<string, string>, finalSummary: string): void {
+  post(shared: SharedStore, prepRes: Record<string, string>, finalSummary: string): Action {
     shared.allFilesSummary = finalSummary;
     console.log("✅ Combined all summaries");
+    return; // or return null; or return someAction;    
   }
 }
 
@@ -71,7 +73,11 @@ async function main() {
   console.log("\n📊 Results:");
   console.log("\n📄 Individual Summaries:");
   for (const [filename, summary] of Object.entries(shared.fileSummaries)) {
-    console.log(`${filename}: ${summary.substring(0, 100)}...`);
+    if (typeof summary === "string") {
+      console.log(`${filename}: ${summary.substring(0, 100)}...`);
+    } else {
+      console.log(`${filename}: [summary is not a string]`);
+    }
   }
 
   console.log("\n📋 Final Combined Summary:");

@@ -142,6 +142,13 @@ export class Flow extends BaseNode {
     this.startNode = start;
     return start;
   }
+  // Add runAsync to Flow for async orchestration
+  async runAsync(shared: SharedStore): Promise<any> {
+    if (typeof (this as any)._runAsync === "function") {
+      return (this as any)._runAsync(shared);
+    }
+    throw new Error("runAsync is not implemented.");
+  }
 
   getNextNode(curr: BaseNode, action: Action): BaseNode | null {
     const nxt = curr.successors[action || "default"];
