@@ -1,7 +1,7 @@
 {
   "name": "pocketflow-ts",
   "version": "1.0.0",
-  "description": "A 300-line minimalist LLM framework for TypeScript/Node.js - Zero dependencies core, Agents, Task Decomposition, RAG, etc.",
+  "description": "A 150-line minimalist LLM framework for TypeScript/Node.js - Zero dependencies core, Agents, Task Decomposition, RAG, etc.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

@@ -1,6 +1,6 @@
 # PocketFlow TypeScript
 
-A 100-line minimalist LLM framework for TypeScript/Node.js - **Zero dependencies core**, Agents, Task Decomposition, RAG, etc.
+A 150-line minimalist LLM framework for TypeScript/Node.js - **Zero dependencies core**, Agents, Task Decomposition, RAG, etc.
 
 ## 🚀 Quick Start
 
