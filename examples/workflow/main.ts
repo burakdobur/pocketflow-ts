@@ -1,49 +1,49 @@
-import { Node, Flow, SharedStore, chain } from '../../src/index';
-import { callLLM } from '../utils/callLLM';
+import { AsyncNode, AsyncFlow, SharedStore, chain } from '../../src/index';
+import { callLLMAsync } from '../utils/callLLM';
 
 // Example: Article Writing Workflow
-class GenerateOutline extends Node {
-  prep(shared: SharedStore): string {
+class GenerateOutline extends AsyncNode {
+  async prepAsync(shared: SharedStore): Promise<string> {
     return shared.topic;
   }
 
-  exec(topic: string): string {
-    return callLLM(`Create a detailed outline for an article about ${topic}`);
+  async execAsync(topic: string): Promise<string> {
+    return await callLLMAsync(`Create a detailed outline for an article about ${topic}`);
   }
 
-  post(shared: SharedStore, prepRes: string, execRes: string): string {
+  async postAsync(shared: SharedStore, prepRes: string, execRes: string): Promise<string> {
     shared.outline = execRes;
     console.log("✅ Outline generated");
     return "default";
   }
 }
 
-class WriteSection extends Node {
-  prep(shared: SharedStore): string {
+class WriteSection extends AsyncNode {
+  async prepAsync(shared: SharedStore): Promise<string> {
     return shared.outline;
   }
 
-  exec(outline: string): string {
-    return callLLM(`Write content based on this outline: ${outline}`);
+  async execAsync(outline: string): Promise<string> {
+    return await callLLMAsync(`Write content based on this outline: ${outline}`);
   }
 
-  post(shared: SharedStore, prepRes: string, execRes: string): string {
+  async postAsync(shared: SharedStore, prepRes: string, execRes: string): Promise<string> {
     shared.draft = execRes;
     console.log("✅ Draft written");
     return "default";
   }
 }
 
-class ReviewAndRefine extends Node {
-  prep(shared: SharedStore): string {
+class ReviewAndRefine extends AsyncNode {
+  async prepAsync(shared: SharedStore): Promise<string> {
     return shared.draft;
   }
 
-  exec(draft: string): string {
-    return callLLM(`Review and improve this draft: ${draft}`);
+  async execAsync(draft: string): Promise<string> {
+    return await callLLMAsync(`Review and improve this draft: ${draft}`);
   }
 
-  post(shared: SharedStore, prepRes: string, execRes: string): string {
+  async postAsync(shared: SharedStore, prepRes: string, execRes: string): Promise<string> {
     shared.finalArticle = execRes;
     console.log("✅ Article refined");
     return "default";
@@ -60,7 +60,7 @@ async function main() {
   chain(outline, write, review);
 
   // Create and run flow
-  const writingFlow = new Flow(outline);
+  const writingFlow = new AsyncFlow(outline);
 
   const shared: SharedStore = {
     topic: "AI Safety",
@@ -70,7 +70,7 @@ async function main() {
   };
 
   console.log("🚀 Starting article writing workflow...");
-  writingFlow.run(shared);
+  await writingFlow.runAsync(shared);
 
   console.log("\n📊 Results:");
   console.log("Topic:", shared.topic);

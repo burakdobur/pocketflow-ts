@@ -7,9 +7,9 @@ async function main() {
     answer: null
   };
 
-  const result = await qaFlow.runAsync(shared);
-  shared.answer = result.answer;
-  console.log(shared.answer);
+  await qaFlow.runAsync(shared);
+  console.log("Question:", shared.question);
+  console.log("Answer:", shared.answer);
 }
 
 if (require.main === module) {
