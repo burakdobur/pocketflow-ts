@@ -23,7 +23,7 @@ npm install
 2. **Edit `.env` with your API credentials:**
    ```env
    OPENAI_API_KEY=your-actual-api-key-here
-   OPENAI_API_BASE_URL=https://aig.quaservices.com
+   OPENAI_API_BASE_URL=https://api.openai.com/v1
    OPENAI_API_TIMEOUT=10000
    ```
 
